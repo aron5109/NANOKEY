@@ -4,6 +4,7 @@ import { VirtualKeys } from './VirtualKeys';
 import { ResultsOverlay } from './ResultsOverlay';
 import { AppSettings, BackendResponse, KeyMode } from '../../types';
 import { BackendService } from '../../services/backendService';
+import { LAYOUTS, LANGUAGE_ORDER } from '../../utils/keyLayouts';
 
 interface NanoKeyContainerProps {
   inputText: string;
@@ -12,6 +13,7 @@ interface NanoKeyContainerProps {
   settings: AppSettings;
   onUpdateText: (newText: string) => void;
   onToast: (msg: string) => void;
+  onOpenSettings: () => void;
 }
 
 export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({ 
@@ -20,24 +22,39 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
   selectionEnd, 
   settings, 
   onUpdateText,
-  onToast
+  onToast,
+  onOpenSettings
 }) => {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<BackendResponse | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
+  const [currentLangIndex, setCurrentLangIndex] = useState(0);
+
+  // Get current layout definition
+  const currentLangId = LANGUAGE_ORDER[currentLangIndex];
+  const currentLayout = LAYOUTS[currentLangId];
+
+  const handleLanguageToggle = () => {
+    setCurrentLangIndex((prev) => (prev + 1) % LANGUAGE_ORDER.length);
+  };
 
   const handleAction = async (mode: KeyMode) => {
-    // 4) Supported input sources logic
-    // Priority: Selected text -> Composing text
+    // 1. Check if Nanobot is enabled
+    if (!settings.nanobotEnabled) {
+      onToast("Nanobot is off");
+      // Simulate delay then open settings
+      setTimeout(() => onOpenSettings(), 600);
+      return;
+    }
+
+    // 2. Input Source Priority: Selected -> Composing
     let targetText = inputText;
-    
-    // Simple selection extraction simulation
     if (selectionEnd > selectionStart) {
         targetText = inputText.substring(selectionStart, selectionEnd);
     }
 
     if (!targetText) {
-        onToast("No text found.");
+        onToast("No text selected");
         return;
     }
 
@@ -46,7 +63,13 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
     setOverlayVisible(false);
 
     try {
-        const res = await BackendService.callBackend(targetText, mode, settings);
+        const res = await BackendService.callBackend(
+          targetText, 
+          mode, 
+          settings,
+          currentLayout.id,
+          currentLayout.locale
+        );
         setResponse(res);
         setOverlayVisible(true);
     } catch (e: any) {
@@ -57,18 +80,13 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
   };
 
   const handleInsert = (text: string) => {
-    // Basic insertion logic (simulating replacing text or appending)
-    // If text was selected, replace selection.
-    // If no selection, append to end (simplification for v0.1 sim).
     let newText = "";
+    // Replace selection or append
     if (selectionEnd > selectionStart) {
         const before = inputText.substring(0, selectionStart);
         const after = inputText.substring(selectionEnd);
         newText = before + text + after;
     } else {
-        // If cursor is at end or midway, insert there. 
-        // For this simulator, if cursor is at 0 and no text, just set text.
-        // If cursor is somewhere, insert.
         const before = inputText.substring(0, selectionEnd);
         const after = inputText.substring(selectionEnd);
         newText = before + text + after;
@@ -79,7 +97,6 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
   };
 
   const handleKeyPress = (key: string) => {
-     // Insert char at cursor position (simplified)
      const before = inputText.substring(0, selectionEnd);
      const after = inputText.substring(selectionEnd);
      onUpdateText(before + key + after);
@@ -89,12 +106,10 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
     if (selectionEnd === 0 && selectionStart === 0) return;
     
     if (selectionEnd > selectionStart) {
-        // Delete selection
         const before = inputText.substring(0, selectionStart);
         const after = inputText.substring(selectionEnd);
         onUpdateText(before + after);
     } else {
-        // Delete character before cursor
         const before = inputText.substring(0, selectionEnd - 1);
         const after = inputText.substring(selectionEnd);
         onUpdateText(before + after);
@@ -106,7 +121,12 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
        <ActionBar onAction={handleAction} isLoading={loading} />
        
        <div className="relative">
-          <VirtualKeys onKeyPress={handleKeyPress} onDelete={handleDelete} />
+          <VirtualKeys 
+            onKeyPress={handleKeyPress} 
+            onDelete={handleDelete}
+            onLanguageToggle={handleLanguageToggle}
+            layout={currentLayout} 
+          />
           
           <ResultsOverlay 
             visible={overlayVisible}

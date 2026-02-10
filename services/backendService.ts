@@ -1,13 +1,15 @@
 import { AppSettings, BackendRequest, BackendResponse, KeyMode } from '../types';
 
-const MOCK_DELAY = 800;
+const MOCK_DELAY = 600;
 
 export class BackendService {
   
   static async callBackend(
     text: string, 
     mode: KeyMode, 
-    settings: AppSettings
+    settings: AppSettings,
+    currentLanguageId: string,
+    currentLocale: string
   ): Promise<BackendResponse> {
     
     // Validate Input
@@ -18,102 +20,88 @@ export class BackendService {
     const requestPayload: BackendRequest = {
       client: "nanokey",
       version: "0.1",
-      mode: mode,
+      mode: mode, // "reply" | "rewrite" | "translate"
       text: text,
       app: {
-        package: "com.facebook.orca", // Simulating Messenger
+        package: "com.facebook.orca",
         displayName: "Messenger"
       },
       meta: {
-        locale: "en-US", // Hardcoded for demo
-        timestamp: Date.now()
+        keyboardLanguage: currentLanguageId,
+        locale: currentLocale,
+        preferredLanguages: ["en", "is", "ru", "es"]
       }
     };
 
-    // If Dev Mode is OFF, force HTTPS (simulated validation)
+    // Simulated Security Check
     if (!settings.devMode && settings.baseUrl.startsWith("http:")) {
-      // Note: In a browser, mixed content blocks this anyway, but this checks logic.
-      // We'll allow it for the simulator but warn.
-      console.warn("Security Warning: HTTP used without Dev Mode (Simulated Check)");
+      console.warn("Security Warning: HTTP used without Dev Mode");
     }
 
     try {
-      // Real Fetch Implementation
       if (settings.baseUrl && settings.baseUrl !== "mock") {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), settings.timeoutSeconds * 1000);
 
         const response = await fetch(`${settings.baseUrl}/generate`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestPayload),
           signal: controller.signal
         });
 
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-           throw new Error(`Backend error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Backend error: ${response.status}`);
 
         const data = await response.json();
-        
-        if (!data || !data.candidates) {
-            throw new Error("Invalid backend response");
-        }
+        if (!data || !data.candidates) throw new Error("Invalid backend response");
         
         return data as BackendResponse;
-      } 
-      
-      // MOCK Implementation (Default or if URL is "mock")
-      else {
+      } else {
+        // Mock Implementation
         await new Promise(resolve => setTimeout(resolve, MOCK_DELAY));
-        
-        return BackendService.getMockResponse(mode, text, settings.backendType);
+        return BackendService.getMockResponse(mode, text, settings.backendType, currentLanguageId);
       }
-
     } catch (error: unknown) {
-      if (error instanceof Error) {
-          if (error.name === 'AbortError') {
-              throw new Error("Backend unreachable (Timeout)");
-          }
-          throw error;
+      if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error("Backend unreachable (Timeout)");
       }
-      throw new Error("Backend unreachable");
+      throw error;
     }
   }
 
-  static getMockResponse(mode: KeyMode, text: string, backendType: string): BackendResponse {
+  static getMockResponse(mode: KeyMode, text: string, backendType: string, lang: string): BackendResponse {
     let candidates = [];
-    
     const shortText = text.length > 20 ? text.substring(0, 20) + "..." : text;
 
+    // Simulate backend logic
     switch (mode) {
-      case KeyMode.GEN:
-        candidates = [
-          { text: `Sure, I can help with "${shortText}". Let's meet at 5?` },
-          { text: `That sounds interesting regarding "${shortText}". Tell me more.` }
-        ];
+      case KeyMode.REPLY:
+        if (lang === 'is') {
+            candidates = [{ text: "Já, það hljómar vel." }, { text: "Nei, ég kemst ekki." }];
+        } else if (lang === 'ru') {
+            candidates = [{ text: "Да, конечно." }, { text: "Нет, извините." }];
+        } else {
+            candidates = [{ text: "Yes, sounds good." }, { text: "No, I can't make it." }];
+        }
         break;
       case KeyMode.REWRITE:
         candidates = [
-          { text: `(Formal) ${text} Furthermore, we should consider...` },
-          { text: `(Casual) ${text} lol that's crazy.` }
+          { text: `${text} (Formal)` },
+          { text: `${text} (Concise)` }
         ];
         break;
       case KeyMode.TRANSLATE:
-        candidates = [
-          { text: `(ES) ${text} [Simulated Translation]` },
-          { text: `(FR) ${text} [Simulated Translation]` }
-        ];
+        // Mock translation
+        if (lang === 'is') candidates = [{ text: "[EN] " + text }, { text: "[DK] " + text }];
+        else candidates = [{ text: "[IS] " + text }, { text: "[ES] " + text }];
         break;
     }
 
     return {
       candidates,
-      actions: [],
+      actions: [], // reserved
       debug: {
         backend: backendType,
         latencyMs: MOCK_DELAY

@@ -6,8 +6,10 @@ export enum BackendType {
   CUSTOM = 'custom',
 }
 
+// Mode is now strict lowercase string in JSON, but we can use enum for internal type safety
+// mapped to lower case strings.
 export enum KeyMode {
-  GEN = 'gen',
+  REPLY = 'reply',
   REWRITE = 'rewrite',
   TRANSLATE = 'translate',
 }
@@ -18,14 +20,15 @@ export interface AppContext {
 }
 
 export interface RequestMeta {
+  keyboardLanguage: string;
   locale: string;
-  timestamp: number;
+  preferredLanguages: string[];
 }
 
 export interface BackendRequest {
   client: string; // "nanokey"
   version: string; // "0.1"
-  mode: KeyMode;
+  mode: string; // "reply" | "rewrite" | "translate"
   text: string;
   app: AppContext;
   meta: RequestMeta;
@@ -37,8 +40,9 @@ export interface Candidate {
 
 export interface BackendResponse {
   candidates: Candidate[];
-  actions: any[]; // Reserved for v0.2
-  debug: {
+  // Actions reserved for future
+  actions?: any[];
+  debug?: {
     backend: string;
     latencyMs: number;
   };
@@ -47,10 +51,17 @@ export interface BackendResponse {
 // App State Types
 
 export interface AppSettings {
+  // Backend Config
+  nanobotEnabled: boolean; // Main toggle
   backendType: BackendType;
   baseUrl: string;
   timeoutSeconds: number;
-  devMode: boolean; // Allows HTTP
+  devMode: boolean;
+
+  // Language Behavior
+  fallbackLanguage: string;
+  replyLanguage: string; // 'keyboard' or specific code
+  translateTarget: string; // 'keyboard' or specific code
 }
 
 export interface SimulationState {

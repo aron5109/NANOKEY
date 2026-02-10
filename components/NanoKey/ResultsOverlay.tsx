@@ -26,7 +26,7 @@ export const ResultsOverlay: React.FC<ResultsOverlayProps> = ({ response, onSele
       {/* Header */}
       <div className="flex justify-between items-center p-2 bg-gray-800 border-b border-gray-700">
         <div className="text-[10px] text-gray-400 font-mono">
-           {response.debug.backend} • {response.debug.latencyMs}ms
+           {response.debug?.backend} • {response.debug?.latencyMs}ms
         </div>
         <button onClick={onClose} className="text-gray-400 hover:text-white px-2">
           ✕

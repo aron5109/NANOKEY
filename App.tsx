@@ -16,10 +16,14 @@ function App() {
 
   // Settings State (Persisted in memory for demo, could be localStorage)
   const [settings, setSettings] = useState<AppSettings>({
+    nanobotEnabled: true,
     backendType: BackendType.NANOBOT,
     baseUrl: 'mock',
     timeoutSeconds: 20,
-    devMode: false
+    devMode: false,
+    fallbackLanguage: 'en',
+    replyLanguage: 'keyboard',
+    translateTarget: 'keyboard'
   });
 
   // Mock Messages for the Dummy App
@@ -42,7 +46,7 @@ function App() {
     const saved = localStorage.getItem('nanokey_settings');
     if (saved) {
         try {
-            setSettings(JSON.parse(saved));
+            setSettings({ ...settings, ...JSON.parse(saved) });
         } catch (e) {}
     }
   }, []);
@@ -90,6 +94,7 @@ function App() {
                 setSelection({ start: t.length, end: t.length });
             }}
             onToast={showToast}
+            onOpenSettings={() => setCurrentView('settings')}
           />
 
           {/* Toast Notification */}
