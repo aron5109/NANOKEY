@@ -1,0 +1,5 @@
+{
+  "name": "NANOKEY v0.1 Simulator",
+  "description": "A high-fidelity web simulator for the NANOKEY v0.1 Android IME specification, demonstrating the UI-only thin client architecture, backend connector logic, and text extraction flow.",
+  "requestFramePermissions": []
+}
