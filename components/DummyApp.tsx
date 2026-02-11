@@ -21,9 +21,9 @@ export const DummyApp: React.FC<DummyAppProps> = ({ inputText, setInputText, onS
 
   // Auto-resize or just fixed height for simulator
   return (
-    <div className="flex-1 bg-black flex flex-col overflow-hidden">
+    <div className="flex-1 min-h-0 bg-black flex flex-col overflow-hidden">
       {/* App Header */}
-      <div className="h-12 bg-[#202020] flex items-center px-4 border-b border-[#333]">
+      <div className="h-12 bg-[#202020] flex items-center px-4 border-b border-[#333] flex-shrink-0">
          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold mr-3">M</div>
          <span className="text-white font-medium">Messenger (Sim)</span>
       </div>
@@ -41,7 +41,7 @@ export const DummyApp: React.FC<DummyAppProps> = ({ inputText, setInputText, onS
       </div>
 
       {/* Input Area */}
-      <div className="p-2 bg-[#202020]">
+      <div className="p-2 bg-[#202020] flex-shrink-0">
         <textarea
             ref={textareaRef}
             value={inputText}

@@ -74,7 +74,7 @@ function App() {
             messages={messages}
           />
           
-          <div className="flex justify-end bg-[#202020] px-2 py-1">
+          <div className="flex justify-end bg-[#202020] px-2 py-1 flex-shrink-0">
              <button 
                 onClick={() => setCurrentView('settings')}
                 className="text-[10px] text-gray-500 uppercase font-bold tracking-wider px-2 py-1 hover:text-white"

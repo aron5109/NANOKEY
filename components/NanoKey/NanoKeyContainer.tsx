@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ActionBar } from './ActionBar';
 import { VirtualKeys } from './VirtualKeys';
 import { ResultsOverlay } from './ResultsOverlay';
+import { LanguagePicker } from './LanguagePicker';
 import { AppSettings, BackendResponse, KeyMode } from '../../types';
 import { BackendService } from '../../services/backendService';
 import { LAYOUTS, LANGUAGE_ORDER } from '../../utils/keyLayouts';
@@ -28,21 +29,16 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<BackendResponse | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
-  const [currentLangIndex, setCurrentLangIndex] = useState(0);
+  const [showLangPicker, setShowLangPicker] = useState(false);
+  const [currentLangId, setCurrentLangId] = useState(LANGUAGE_ORDER[0]);
 
   // Get current layout definition
-  const currentLangId = LANGUAGE_ORDER[currentLangIndex];
   const currentLayout = LAYOUTS[currentLangId];
-
-  const handleLanguageToggle = () => {
-    setCurrentLangIndex((prev) => (prev + 1) % LANGUAGE_ORDER.length);
-  };
 
   const handleAction = async (mode: KeyMode) => {
     // 1. Check if Nanobot is enabled
     if (!settings.nanobotEnabled) {
       onToast("Nanobot is off");
-      // Simulate delay then open settings
       setTimeout(() => onOpenSettings(), 600);
       return;
     }
@@ -81,7 +77,6 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
 
   const handleInsert = (text: string) => {
     let newText = "";
-    // Replace selection or append
     if (selectionEnd > selectionStart) {
         const before = inputText.substring(0, selectionStart);
         const after = inputText.substring(selectionEnd);
@@ -94,6 +89,28 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
     
     onUpdateText(newText);
     setOverlayVisible(false);
+  };
+
+  const handlePaste = async () => {
+     try {
+         const text = await navigator.clipboard.readText();
+         if (text) {
+             handleInsert(text);
+             onToast("Pasted from clipboard");
+         } else {
+             onToast("Clipboard empty");
+         }
+     } catch (e) {
+         // In simulation/iframe environments, readText often fails.
+         // We can fallback to a dummy paste for the demo if it fails.
+         console.warn(e);
+         handleInsert(" [Clipboard Content] ");
+         onToast("Simulated Paste (Browser blocked real clipboard)");
+     }
+  };
+
+  const handleEmoji = () => {
+      onToast("Emoji not implemented in v0.1");
   };
 
   const handleKeyPress = (key: string) => {
@@ -117,14 +134,19 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
   };
 
   return (
-    <div className="w-full bg-gray-900 flex flex-col relative border-t border-gray-700">
-       <ActionBar onAction={handleAction} isLoading={loading} />
+    <div className="w-full bg-gray-900 flex flex-col relative border-t border-gray-700 flex-shrink-0 pb-6">
+       <ActionBar 
+         onAction={handleAction} 
+         onPaste={handlePaste}
+         isLoading={loading} 
+       />
        
        <div className="relative">
           <VirtualKeys 
             onKeyPress={handleKeyPress} 
             onDelete={handleDelete}
-            onLanguageToggle={handleLanguageToggle}
+            onEmoji={handleEmoji}
+            onSpaceLongPress={() => setShowLangPicker(true)}
             layout={currentLayout} 
           />
           
@@ -134,6 +156,17 @@ export const NanoKeyContainer: React.FC<NanoKeyContainerProps> = ({
             onSelect={handleInsert}
             onClose={() => setOverlayVisible(false)}
           />
+
+          {showLangPicker && (
+              <LanguagePicker
+                 currentLang={currentLangId}
+                 onSelect={(lang) => {
+                     setCurrentLangId(lang);
+                     setShowLangPicker(false);
+                 }}
+                 onClose={() => setShowLangPicker(false)}
+              />
+          )}
           
           {loading && (
              <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-30">
